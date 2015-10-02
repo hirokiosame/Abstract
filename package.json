@@ -2,12 +2,12 @@
   "name": "abstract",
   "version": "1.0.0",
   "description": "MySQL ORM for Node",
-  "main": "index.js",
+  "main": "dist/index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "compile": "babel src -e 0 --out-file dist/index.js -s",
+    "compile": "babel src -e 0 --out-dir dist -s",
     "test": "babel-node --stage 0 test"
   },
   "repository": {
