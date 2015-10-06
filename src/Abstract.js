@@ -2,14 +2,9 @@ import mysql from 'mysql';
 import InstanceMethods from './Abstract.instanceMethods';
 
 
-class A {
-	b = [];
-}
-
-
-
 export default class Abstract extends InstanceMethods {
 
+	// A set that contains the unsyncd attributes
 	unsyncd = {};
 
 	constructor(properties){
@@ -30,7 +25,7 @@ export default class Abstract extends InstanceMethods {
 			);
 
 			// If reference, make sure it has a primary key
-			// TODO: Allow reference ket to be set (Model.referenceBy('phoneNumber'))
+			// TODO: Allow reference key to be set (Model.referenceBy('phoneNumber'))
 			if (attributes[attrName] instanceof Function) {
 				console.assert(typeof attributes[attrName].primaryKey === 'string', 'Reference schema must have a primary key');
 
@@ -51,7 +46,7 @@ export default class Abstract extends InstanceMethods {
 		model.createTable((err) => { if (err) { throw err; } });
 	}
 
-
+	
 	static connect(config){
 
 		this._connection = mysql.createConnection(config);

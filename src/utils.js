@@ -23,10 +23,10 @@ export {EE};
 
 
 export function buildWhere(where = [], filter, or = false){
-	if( where instanceof Array && where.length === 0 ){ return ""; }
+	if (where instanceof Array && where.length === 0) { return ''; }
 
-	return "(" + where.map( w => (( w instanceof Array ) ? buildWhere(w, filter, !or) : filter(w)) )
-			.join(or ? " OR " : " AND ") + ")";
+	return '(' + where.map( w => (( w instanceof Array ) ? buildWhere(w, filter, !or) : filter(w)) )
+			.join(or ? ' OR ' : ' AND ') + ')';
 };
 
 
@@ -36,15 +36,15 @@ export function structureModel(model, row){
 
 	let modeled = row[model.tableName];
 
-	if( !modeled ){ return undefined; }
+	if (!modeled) { return undefined; }
 
 	// Look for foreign key references
-	for( let att in model.attributes ){
+	for (let att in model.attributes) {
 
 		let relModel = model.attributes[att];
 
 		// Check if schema-attribute is relational
-		if( relModel instanceof Function ){
+		if (relModel instanceof Function) {
 			modeled[att] = structureModel(relModel, row);
 		}
 	}

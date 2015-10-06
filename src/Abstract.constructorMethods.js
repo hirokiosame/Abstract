@@ -11,11 +11,7 @@ const SQL_COMPLETED = Symbol('Completed');
 
 export default class ModelConstructorMethods {
 
-	constructor(){
-
-	}
-
-
+	constructor(){}
 	
 	static createTable (cb) {
 
@@ -52,9 +48,6 @@ export default class ModelConstructorMethods {
 
 		return this;
 	}
-
-
-
 
 
 	static find(){
