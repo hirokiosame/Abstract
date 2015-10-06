@@ -5,13 +5,13 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports["default"] = {
 
-	createTable: function createTable(schema) {
+	createTable: function createTable(model) {
 
 		var attributes = [];
 
 		// Attributes
-		for (var attribute in schema.attributes) {
-			var opts = schema.attributes[attribute];
+		for (var attribute in model.attributes) {
+			var opts = model.attributes[attribute];
 
 			if (opts instanceof Function) {
 
@@ -24,21 +24,21 @@ exports["default"] = {
 		}
 
 		// Primary Key
-		if (typeof schema.primaryKey === "string" && schema.attributes[schema.primaryKey]) {
-			attributes.push("PRIMARY KEY (`" + schema.primaryKey + "`)");
+		if (typeof model.primaryKey === "string" && model.attributes[model.primaryKey]) {
+			attributes.push("PRIMARY KEY (`" + model.primaryKey + "`)");
 		}
 
 		// Unique keys
-		if (schema.uniqueKeys instanceof Array) {
-			attributes.push("UNIQUE KEY (`" + schema.uniqueKeys.join("`, `") + "`)");
+		if (model.uniqueKeys instanceof Array) {
+			attributes.push("UNIQUE KEY (`" + model.uniqueKeys.join("`, `") + "`)");
 		}
 
-		var query = "CREATE TABLE IF NOT EXISTS `" + schema.tableName + "` (\n\t\t\t" + attributes.join(",\n") + "\n\t\t) ENGINE=InnoDB DEFAULT CHARSET=latin1;";
+		var query = "CREATE TABLE IF NOT EXISTS `" + model.tableName + "` (\n\t\t\t" + attributes.join(",\n") + "\n\t\t) ENGINE=InnoDB DEFAULT CHARSET=latin1;";
 
 		return query;
 	},
 
-	insertModel: function insertModel(model, instance) {
+	insertModel: function insertModel(model) {
 
 		var attributes = model.attributes;
 
@@ -47,22 +47,22 @@ exports["default"] = {
 
 		for (var att in attributes) {
 
-			if (!instance.hasOwnProperty(att)) {
+			if (!this.hasOwnProperty(att)) {
 				continue;
 			}
 
 			if (attributes[att] instanceof Function) {
 
-				if (instance[att] instanceof attributes[att]) {
+				if (this[att] instanceof attributes[att]) {
 					// Insert PK
 					insertAttributes.push(att);
-					values.push(instance[att][attributes[att].primaryKey]);
+					values.push(this[att][attributes[att].primaryKey]);
 				}
 				continue;
 			}
 
 			insertAttributes.push(att);
-			values.push(instance[att]);
+			values.push(this[att]);
 		}
 
 		return ["INSERT INTO `" + model.tableName + "`\n\t\t\t(" + insertAttributes + ") VALUES (" + Array(values.length).fill('?') + ")\n\t\t\t-- ON DUPLICATE KEY UPDATE " + insertAttributes.map(function (k) {
@@ -70,7 +70,35 @@ exports["default"] = {
 		}) + ";\n\t\t\t", values];
 	},
 
-	updateModel: function updateModel(schema, model) {}
+	updateModel: function updateModel(model) {
+
+		var set = [],
+		    values = [];
+
+		for (var att in model.attributes) {
+			// if( att === model.primaryKey ){ continue; }
+
+			var value = this[att];
+
+			set.push("`" + att + "` = ?");
+
+			if (value instanceof Object) {
+				var _model = value.constructor;
+				values.push(value[_model.primaryKey]);
+			} else {
+				values.push(value);
+			}
+		}
+		values.push(this[model.primaryKey]);
+
+		if (set.length === 0) {
+			return [null, null];
+		}
+
+		var query = "UPDATE " + model.tableName + " SET " + set + " WHERE " + model.primaryKey + " = ?;";
+
+		return [query, values];
+	}
 };
 module.exports = exports["default"];
 //# sourceMappingURL=sqlBuilder.js.map

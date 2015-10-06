@@ -10,17 +10,23 @@ var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_ag
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _mysql = require('mysql');
 
 var _mysql2 = _interopRequireDefault(_mysql);
 
-var _instanceMethods = require('./instanceMethods');
+var _AbstractInstanceMethods = require('./Abstract.instanceMethods');
 
-var _instanceMethods2 = _interopRequireDefault(_instanceMethods);
+var _AbstractInstanceMethods2 = _interopRequireDefault(_AbstractInstanceMethods);
+
+var A = function A() {
+	_classCallCheck(this, A);
+
+	this.b = [];
+};
 
 var Abstract = (function (_InstanceMethods) {
 	_inherits(Abstract, _InstanceMethods);
@@ -30,42 +36,42 @@ var Abstract = (function (_InstanceMethods) {
 
 		_get(Object.getPrototypeOf(Abstract.prototype), 'constructor', this).call(this);
 
+		this.unsyncd = {};
 		if (!(properties instanceof Object)) {
 			return;
 		}
 
 		var model = this.constructor,
-		    schema = model.attributes;
+		    attributes = model.attributes;
 
 		// Iterate schema attributes
-		for (var att in schema) {
+		for (var attrName in attributes) {
 
-			// Validation of attribute
-			if (!properties.hasOwnProperty(att)) {
-				continue;
+			// Validate the schema
+			console.assert(attributes[attrName] instanceof Object || attributes[attrName] instanceof Function, '\'' + attrName + '\' has an invalid schema');
+
+			// If reference, make sure it has a primary key
+			// TODO: Allow reference ket to be set (Model.referenceBy('phoneNumber'))
+			if (attributes[attrName] instanceof Function) {
+				console.assert(typeof attributes[attrName].primaryKey === 'string', 'Reference schema must have a primary key');
+
+				var primaryKey = attributes[attrName].primaryKey;
+
+				console.assert(attributes[attrName].attributes.hasOwnProperty(primaryKey), 'Reference primary key must exist');
 			}
 
-			var attribute = schema[att];
+			setAttribute.call(this, attrName, attributes[attrName]);
 
-			// If foreign reference
-			if (attribute instanceof Function) {
-
-				// Validate reference
-				if (!(properties[att] instanceof Object && properties[att].hasOwnProperty(attribute.primaryKey))) {
-					continue;
-				}
-
-				// Create the instance
-				if (!(properties[att] instanceof attribute)) {
-					properties[att] = new attribute(properties[att]);
-				}
+			if (properties[attrName]) {
+				this[attrName] = properties[attrName];
 			}
-
-			// Add
-			setAttribute.call(this, att, properties[att]);
 		}
 
-		console.log(JSON.stringify(this));
+		model.createTable(function (err) {
+			if (err) {
+				throw err;
+			}
+		});
 	}
 
 	_createClass(Abstract, null, [{
@@ -78,26 +84,36 @@ var Abstract = (function (_InstanceMethods) {
 	}]);
 
 	return Abstract;
-})(_instanceMethods2['default']);
+})(_AbstractInstanceMethods2['default']);
 
 exports['default'] = Abstract;
 ;
 
-function setAttribute(attrName, value) {
+function setAttribute(attrName, attrSchema) {
 
 	var attrSymbol = Symbol(attrName);
-
-	this[attrSymbol] = value;
 
 	Object.defineProperty(this, attrName, {
 		get: function get() {
 			return this[attrSymbol];
 		},
 		set: function set(val) {
-			this.unsyncd = true;
-			return this[attrSymbol] = val;
+
+			if (attrSchema instanceof Function) {
+				console.assert(val instanceof attrSchema, 'Value must be an instance of the reference');
+				console.assert(val.hasOwnProperty(attrSchema.primaryKey), 'Reference must hold a primary key');
+			}
+
+			this[attrSymbol] = val;
+
+			// Mark as unsyncd
+			if (!this.unsyncd[attrName]) {
+				this.unsyncd[attrName] = 1;
+			}
+
+			return val;
 		}
 	});
 }
 module.exports = exports['default'];
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=Abstract.js.map

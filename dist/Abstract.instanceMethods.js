@@ -28,9 +28,9 @@ var _sqlBuilder = require('./sqlBuilder');
 
 var sql = _interopRequireWildcard(_sqlBuilder);
 
-var _constructorMethods = require('./constructorMethods');
+var _AbstractConstructorMethods = require('./Abstract.constructorMethods');
 
-var _constructorMethods2 = _interopRequireDefault(_constructorMethods);
+var _AbstractConstructorMethods2 = _interopRequireDefault(_AbstractConstructorMethods);
 
 var InstanceMethods = (function (_ConstructorMethods) {
 	_inherits(InstanceMethods, _ConstructorMethods);
@@ -56,52 +56,36 @@ var InstanceMethods = (function (_ConstructorMethods) {
 			return obj;
 		}
 	}, {
-		key: 'belongsTo',
-		value: function belongsTo() {
+		key: 'findByAttributes',
+		value: function findByAttributes(keys, cb) {
 
-			// console.log('belongsTo');
+			var model = this.constructor,
+			    attributes = model.attributes;
 
-			var model = this.constructor;
+			var where = [],
+			    values = [];
 
 			var _iteratorNormalCompletion = true;
 			var _didIteratorError = false;
 			var _iteratorError = undefined;
 
 			try {
-				for (var _len = arguments.length, objs = Array(_len), _key = 0; _key < _len; _key++) {
-					objs[_key] = arguments[_key];
-				}
+				for (var _iterator = keys[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+					var att = _step.value;
 
-				for (var _iterator = objs[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-					var obj = _step.value;
+					console.assert(att in attributes, 'Attribute \'' + att + '\' not defined in schema');
 
-					if (!(obj instanceof Model)) {
-						continue;
+					var value = this[att];
+
+					where.push('`' + att + '` = ?');
+
+					// If foreign reference
+					if (typeof attributes[att] === 'function') {
+						var _model = attributes[att];
+						values.push(value[_model.primaryKey]);
+					} else {
+						values.push(value);
 					}
-
-					var instanceParent = obj.constructor;
-
-					// Verify has primary key
-					if (!obj.hasOwnProperty(instanceParent.primaryKey)) {
-						throw new Error('Cannot establish relation without a primary key');
-					}
-
-					// Verify that the relation exists in schema
-					var exists = false;
-					for (var att in model.attributes) {
-						if (model.attributes[att] === instanceParent) {
-							exists = att;break;
-						}
-					}
-
-					if (exists === false) {
-						throw new Error('The relationship does not exist');
-					}
-
-					// let opts = {};
-					// opts[instanceParent.primaryKey] = obj[instanceParent.primaryKey];
-
-					this[exists] = obj;
 				}
 			} catch (err) {
 				_didIteratorError = true;
@@ -118,54 +102,6 @@ var InstanceMethods = (function (_ConstructorMethods) {
 				}
 			}
 
-			return this;
-		}
-	}, {
-		key: 'findByAttributes',
-		value: function findByAttributes(keys, cb) {
-
-			var model = this.constructor,
-			    attributes = model.attributes;
-
-			var where = [],
-			    values = [];
-
-			var _iteratorNormalCompletion2 = true;
-			var _didIteratorError2 = false;
-			var _iteratorError2 = undefined;
-
-			try {
-				for (var _iterator2 = keys[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-					var att = _step2.value;
-
-					console.assert(att in attributes, 'Attribute \'' + att + '\' not defined in schema');
-
-					var value = this[att];
-
-					where.push('`' + att + '` = ?');
-
-					// if( value instanceof Object ){
-					// 	let _model = value.constructor;
-					// 	values.push(value[_model.primaryKey]);
-					// }else{
-					values.push(value);
-					// }
-				}
-			} catch (err) {
-				_didIteratorError2 = true;
-				_iteratorError2 = err;
-			} finally {
-				try {
-					if (!_iteratorNormalCompletion2 && _iterator2['return']) {
-						_iterator2['return']();
-					}
-				} finally {
-					if (_didIteratorError2) {
-						throw _iteratorError2;
-					}
-				}
-			}
-
 			model.find(where, values, cb);
 		}
 	}, {
@@ -175,75 +111,60 @@ var InstanceMethods = (function (_ConstructorMethods) {
 
 			var model = this.constructor;
 
+			var attributes = undefined;
+
 			// Find by primary key
 			if (this[model.primaryKey]) {
-
-				// IMPLEMENT
-				// Fetch Data
-				this.findByAttributes([model.primaryKey], function (err, models) {
-
-					console.assert(!err, 'There was an error ' + err);
-
-					console.log('found', models);
-					if (models instanceof Array && models.length > 0) {
-
-						for (var att in models[0]) {
-
-							// If attribues don't exist
-							if (!_this.hasOwnProperty(att)) {
-								_this[att] = models[0][att];
-							}
-						}
-						cb(_this);
-
-						// Only extend key properties
-						// cb( this::extendProperties(model, models[0]) );
-					} else {
-							cb(false);
-						}
-				});
-				return;
+				attributes = [model.primaryKey];
 			}
 
 			// Find by unique keys
-			if (model.uniqueKeys instanceof Array && model.uniqueKeys.every(function (att) {
-				return _this[att] !== undefined;
-			})) {
+			else if (model.uniqueKeys instanceof Array && model.uniqueKeys.length > 0 && model.uniqueKeys.every(function (att) {
+					return _this[att] !== undefined;
+				})) {
+					attributes = model.uniqueKeys;
+				}
 
-				// Fetch Data
-				this.findByAttributes(model.uniqueKeys, function (err, models) {
-
-					if (models instanceof Array && models.length > 0) {
-
-						for (var att in models[0]) {
-
-							// If attribues don't exist
-							if (!_this.hasOwnProperty(att)) {
-								_this[att] = models[0][att];
-							}
-						}
-						cb(_this);
-
-						// Only extend key properties
-						// cb( this::extendProperties(model, models[0]) );
-					} else {
-							cb(false);
-						}
-				});
-				return;
+			if (!attributes) {
+				cb(false);
 			}
 
-			cb(false);
+			// IMPLEMENT
+			// Fetch Data
+			this.findByAttributes(attributes, function (err, models) {
+
+				console.assert(!err, 'There was an error ' + err);
+
+				if (models.length === 0) {
+					return cb(false);
+				}
+
+				console.assert(models.length === 1, 'More than one models matched. Please revise your schema');
+
+				for (var att in models[0]) {
+
+					// If attribues don't exist
+					if (_this[att] === undefined) {
+						_this[att] = models[0][att];
+					}
+				}
+
+				cb(_this);
+			});
 		}
 
 		// Insert or update
+
+		// In order to save a model, it must be ensured that it can be retrieved again in the future
+		// We will enforce a composite key in the form of either a primary key or unique keys
 	}, {
 		key: 'save',
 		value: function save(cb) {
+
 			return _asynk2['default'].call(this, regeneratorRuntime.mark(function callee$2$0(resume) {
 				var _model$_connection;
 
-				var model, att, err, result, tableCreated, _ref, _ref2, _ref3, _ref32, found, query, _ref4, _ref42;
+				var model, att, err, result, _ref, _ref2, found, query, _ref3, _ref32;
 
 				return regeneratorRuntime.wrap(function callee$2$0$(context$3$0) {
 					var _this2 = this;
@@ -252,74 +173,53 @@ var InstanceMethods = (function (_ConstructorMethods) {
 						case 0:
 							model = this.constructor;
 
-							console.log('Save', this);
-
-							// Validation
+							/* Validation */
 							for (att in model.attributes) {
+
+								/* Validation - Required */
 								if (model.attributes[att].required) {
-									console.assert(!this[att], 'Missing required field ' + att + ' in ' + JSON.stringify(this));
+									console.assert([undefined, null].indexOf(this[att]) === -1, 'Missing required field "' + att + '" in ' + JSON.stringify(this));
 								}
 							}
 
 							err = undefined, result = undefined;
-							tableCreated = undefined;
-							context$3$0.next = 7;
-							return model.createTable(resume);
-
-						case 7:
-							_ref = context$3$0.sent;
-							_ref2 = _slicedToArray(_ref, 2);
-							err = _ref2[0];
-							tableCreated = _ref2[1];
-
-							console.assert(err === null, err);
-
-							// If table already existed, find self
-
-							if (tableCreated) {
-								context$3$0.next = 21;
-								break;
-							}
-
-							context$3$0.next = 15;
+							context$3$0.next = 5;
 							return this.findSelf(resume);
 
-						case 15:
-							_ref3 = context$3$0.sent;
-							_ref32 = _slicedToArray(_ref3, 1);
-							found = _ref32[0];
-
-							console.log('found?', found);
+						case 5:
+							_ref = context$3$0.sent;
+							_ref2 = _slicedToArray(_ref, 1);
+							found = _ref2[0];
 
 							if (!found) {
-								context$3$0.next = 21;
+								context$3$0.next = 10;
 								break;
 							}
 
 							return context$3$0.abrupt('return', this.update(cb));
 
-						case 21:
-							query = sql.insertModel(model, this);
-
-							console.log(query);
-							context$3$0.next = 25;
+						case 10:
+							query = sql.insertModel.call(this, model, this);
+							context$3$0.next = 13;
 							return (_model$_connection = model._connection).query.apply(_model$_connection, _toConsumableArray(query).concat([resume]));
 
-						case 25:
-							_ref4 = context$3$0.sent;
-							_ref42 = _slicedToArray(_ref4, 2);
-							err = _ref42[0];
-							result = _ref42[1];
+						case 13:
+							_ref3 = context$3$0.sent;
+							_ref32 = _slicedToArray(_ref3, 2);
+							err = _ref32[0];
+							result = _ref32[1];
 
-							console.log(err, result);
+							if (result.insertId > 0) {
+								this[model.primaryKey] = result.insertId;
+							}
 
 							if (!err) {
-								context$3$0.next = 35;
+								context$3$0.next = 23;
 								break;
 							}
 
 							if (!(err.code === 'ER_DUP_ENTRY')) {
-								context$3$0.next = 33;
+								context$3$0.next = 21;
 								break;
 							}
 
@@ -327,12 +227,14 @@ var InstanceMethods = (function (_ConstructorMethods) {
 								return _this2.update(cb);
 							}));
 
-						case 33:
+						case 21:
 
-							typeof cb === 'function' && cb(err);
+							if (typeof cb === 'function') {
+								cb(err);
+							}
 							return context$3$0.abrupt('return');
 
-						case 35:
+						case 23:
 
 							console.assert(result.affectedRows === 1, 'Failed to insert new row');
 
@@ -341,9 +243,11 @@ var InstanceMethods = (function (_ConstructorMethods) {
 							// 	this[model.primaryKey] = result.insertId;
 							// }
 
-							typeof cb === 'function' && cb(null, this);
+							if (typeof cb === 'function') {
+								cb(null, this);
+							}
 
-						case 37:
+						case 25:
 						case 'end':
 							return context$3$0.stop();
 					}
@@ -354,78 +258,58 @@ var InstanceMethods = (function (_ConstructorMethods) {
 		key: 'update',
 		value: function update(cb) {
 
-			console.log('update!');
-
-			var model = this.constructor;
-
-			// EDIT LATER
-			if (!this[model.primaryKey]) {
-				throw new Error('Please add a primary key in ' + JSON.stringify(this));
-			}
-
-			var set = [],
-			    values = [];
-
-			for (var att in this) {
-				// if( att === model.primaryKey ){ continue; }
-
-				var value = this[att];
-
-				set.push('`' + att + '` = ?');
-
-				if (value instanceof Object) {
-					var _model = value.constructor;
-					values.push(value[_model.primaryKey]);
-				} else {
-					values.push(value);
-				}
-			}
-			values.push(this[model.primaryKey]);
-
-			if (set.length === 0) {
-				return cb(null, this);
-			}
-
-			_asynk2['default'].call(this, regeneratorRuntime.mark(function callee$2$0(resume) {
-				var query, _ref5, _ref52, err, rows, fields;
+			return _asynk2['default'].call(this, regeneratorRuntime.mark(function callee$2$0(resume) {
+				var model, _sql$updateModel$call, _sql$updateModel$call2, query, values, _ref4, _ref42, err, rows, fields;
 
 				return regeneratorRuntime.wrap(function callee$2$0$(context$3$0) {
 					while (1) switch (context$3$0.prev = context$3$0.next) {
 						case 0:
-							query = 'UPDATE ' + model.tableName + ' SET ' + set + ' WHERE ' + model.primaryKey + ' = ?;';
+							model = this.constructor;
 
-							console.log(query, values);
+							if (this[model.primaryKey]) {
+								context$3$0.next = 3;
+								break;
+							}
 
-							context$3$0.next = 4;
+							throw new Error('Please add a primary key in ' + JSON.stringify(this));
+
+						case 3:
+							_sql$updateModel$call = sql.updateModel.call(this, model);
+							_sql$updateModel$call2 = _slicedToArray(_sql$updateModel$call, 2);
+							query = _sql$updateModel$call2[0];
+							values = _sql$updateModel$call2[1];
+							context$3$0.next = 9;
 							return model._connection.query(query, values, resume);
 
-						case 4:
-							_ref5 = context$3$0.sent;
-							_ref52 = _slicedToArray(_ref5, 3);
-							err = _ref52[0];
-							rows = _ref52[1];
-							fields = _ref52[2];
+						case 9:
+							_ref4 = context$3$0.sent;
+							_ref42 = _slicedToArray(_ref4, 3);
+							err = _ref42[0];
+							rows = _ref42[1];
+							fields = _ref42[2];
 
 							if (!err) {
-								context$3$0.next = 11;
+								context$3$0.next = 16;
 								break;
 							}
 
 							return context$3$0.abrupt('return', cb(err));
 
-						case 11:
+						case 16:
 							if (!(rows.affectedRows !== 1)) {
-								context$3$0.next = 13;
+								context$3$0.next = 18;
 								break;
 							}
 
 							throw new Error(rows.affectedRows + ' rows affected! ' + query);
 
-						case 13:
+						case 18:
 
-							cb(null, this);
+							if (typeof cb === 'function') {
+								cb(null, this);
+							}
 
-						case 14:
+						case 19:
 						case 'end':
 							return context$3$0.stop();
 					}
@@ -435,10 +319,12 @@ var InstanceMethods = (function (_ConstructorMethods) {
 	}]);
 
 	return InstanceMethods;
-})(_constructorMethods2['default']);
+})(_AbstractConstructorMethods2['default']);
 
 exports['default'] = InstanceMethods;
 module.exports = exports['default'];
 
 // Save instance
-//# sourceMappingURL=instanceMethods.js.map
+
+// EDIT LATER
+//# sourceMappingURL=Abstract.instanceMethods.js.map

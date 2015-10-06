@@ -26,7 +26,7 @@ var user1 = new User({
 
 
 
-console.log(user1.save(function() {
+user1.save(function() {
 	console.log('saved!', arguments);
 
 	setTimeout(function() {
@@ -38,5 +38,12 @@ console.log(user1.save(function() {
 			console.log('saved!', arguments);
 		}));
 
-	}, 5000);
-}));
+	}, 1000);
+});
+
+var user2 = new User({
+	firstName: 'hello12',
+	lastName: 'hello2',
+});
+
+user2.save();

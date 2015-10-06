@@ -66,10 +66,6 @@ export default class ModelConstructorMethods {
 			[[Array, 'where'], [Array, 'replacements'], ['function', 'cb']]
 		)(arguments);
 
-		console.log(where);
-		console.log(replacements);
-
-
 
 		const model = this;
 
@@ -108,9 +104,6 @@ export default class ModelConstructorMethods {
 			};
 		}
 
-
-
-
 		let query = `SELECT * FROM \`${model.tableName}\` `;
 
 
@@ -121,15 +114,12 @@ export default class ModelConstructorMethods {
 			query += 'WHERE ' + buildWhere(_where, (a)=> a );
 		}
 
-		console.log(query, replacements);
 		this._connection.query({
 			sql: query,
 			nestTables: true
 		}, replacements, (err, rows, fields) => {
 
 			if (err) { return cb(err); }
-
-			console.log('Raw find result', err, rows);
 
 			cb(null, rows.map( row => new model(structureModel(model, row)) ));
 		});

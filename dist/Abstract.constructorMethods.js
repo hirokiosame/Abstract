@@ -80,9 +80,6 @@ var ModelConstructorMethods = (function () {
 			var replacements = _signature.replacements;
 			var cb = _signature.cb;
 
-			console.log(where);
-			console.log(replacements);
-
 			var model = this;
 
 			var innerJoins = [];
@@ -147,7 +144,6 @@ var ModelConstructorMethods = (function () {
 				});
 			}
 
-			console.log(query, replacements);
 			this._connection.query({
 				sql: query,
 				nestTables: true
@@ -156,8 +152,6 @@ var ModelConstructorMethods = (function () {
 				if (err) {
 					return cb(err);
 				}
-
-				console.log('Raw find result', err, rows);
 
 				cb(null, rows.map(function (row) {
 					return new model((0, _utils.structureModel)(model, row));
@@ -171,4 +165,4 @@ var ModelConstructorMethods = (function () {
 
 exports['default'] = ModelConstructorMethods;
 module.exports = exports['default'];
-//# sourceMappingURL=constructorMethods.js.map
+//# sourceMappingURL=Abstract.constructorMethods.js.map

@@ -1,13 +1,13 @@
 export default {
 
-	createTable (schema) {
+	createTable (model) {
 
 		let attributes = [];
 
 
 		// Attributes
-		for( let attribute in schema.attributes ){
-			let opts = schema.attributes[attribute];
+		for( let attribute in model.attributes ){
+			let opts = model.attributes[attribute];
 
 			if( opts instanceof Function ){
 
@@ -23,24 +23,24 @@ export default {
 		}
 
 		// Primary Key
-		if( typeof schema.primaryKey === "string" && schema.attributes[schema.primaryKey] ){
-			attributes.push("PRIMARY KEY (`" + schema.primaryKey + "`)");
+		if( typeof model.primaryKey === "string" && model.attributes[model.primaryKey] ){
+			attributes.push("PRIMARY KEY (`" + model.primaryKey + "`)");
 		}
 
 		// Unique keys
-		if( schema.uniqueKeys instanceof Array ){
-			attributes.push("UNIQUE KEY (`" + schema.uniqueKeys.join("`, `") + "`)");
+		if( model.uniqueKeys instanceof Array ){
+			attributes.push("UNIQUE KEY (`" + model.uniqueKeys.join("`, `") + "`)");
 		}
 
 
-		let query = `CREATE TABLE IF NOT EXISTS \`${schema.tableName}\` (
+		let query = `CREATE TABLE IF NOT EXISTS \`${model.tableName}\` (
 			${attributes.join(",\n")}
 		) ENGINE=InnoDB DEFAULT CHARSET=latin1;`;
 
 		return query;
 	},
 
-	insertModel (model, instance) {
+	insertModel (model) {
 
 		const attributes = model.attributes;
 
@@ -49,20 +49,20 @@ export default {
 
 		for (let att in attributes) {
 
-			if (!(instance.hasOwnProperty(att))) { continue; }
+			if (!(this.hasOwnProperty(att))) { continue; }
 
 			if (attributes[att] instanceof Function) {
 
-				if (instance[att] instanceof attributes[att]) {
+				if (this[att] instanceof attributes[att]) {
 					// Insert PK
 					insertAttributes.push(att);
-					values.push(instance[att][attributes[att].primaryKey]);
+					values.push(this[att][attributes[att].primaryKey]);
 				}
 				continue;
 			}
 
 			insertAttributes.push(att);
-			values.push(instance[att]);
+			values.push(this[att]);
 		}
 
 		return [
@@ -74,7 +74,35 @@ export default {
 		];
 	},
 
-	updateModel (schema, model) {
+	updateModel (model) {
 
+		let set = [],
+			values = [];
+
+		for (let att in model.attributes) {
+			// if( att === model.primaryKey ){ continue; }
+
+			let value = this[att];
+
+			set.push(`\`${att}\` = ?`);
+
+			if (value instanceof Object) {
+				let _model = value.constructor;
+				values.push(value[_model.primaryKey]);
+			}else{
+				values.push(value);
+			}
+		}
+		values.push(this[model.primaryKey]);
+
+
+		if (set.length === 0) {
+			return [null, null];
+		}
+
+
+		let query = `UPDATE ${model.tableName} SET ${set} WHERE ${model.primaryKey} = ?;`;
+
+		return [query, values];
 	}
 };
